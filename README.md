@@ -340,7 +340,7 @@ Thank you [DrMoriarty](https://github.com/DrMoriarty) and [cengiz-pz](https://gi
 ```
 MIT License
 
-Copyright (c) 2026 Hiroki Taira
+Copyright (c) 2025-2026 Hiroki Taira
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
