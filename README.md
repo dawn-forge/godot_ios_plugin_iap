@@ -1,4 +1,4 @@
-# Godot iOS plugin for In-App purchase
+# Godot iOS Plugin For In-App Purchase
 
 This is a Godot iOS plugin for In-App purchase.
 This plugin uses Storekit in Swift.
