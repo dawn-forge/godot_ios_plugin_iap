@@ -65,9 +65,13 @@ tmp_dir="$(mktemp -d)"
 cleanup() { rm -rf "$tmp_dir"; }
 trap cleanup EXIT
 unzip -q "$archive" -d "$tmp_dir"
-plugins_dir="$tmp_dir/ios/plugins"
+ios_dir="$tmp_dir/ios"
+plugins_dir="$ios_dir/plugins"
 descriptor="$plugins_dir/ios-in-app-purchase.gdip"
 contract="$plugins_dir/ios-in-app-purchase.contract"
+[[ -d "$ios_dir" && ! -L "$ios_dir" ]] || { echo "iOS directory must not be a symlink" >&2; exit 1; }
+[[ -d "$plugins_dir" && ! -L "$plugins_dir" ]] || { echo "plugin directory must not be a symlink" >&2; exit 1; }
+[[ -z "$(find "$plugins_dir" -type l -print -quit)" ]] || { echo "plugin tree must not contain symlinks" >&2; exit 1; }
 [[ -f "$descriptor" && -f "$contract" ]] || { echo "descriptor or contract missing" >&2; exit 1; }
 
 shared_keys=(

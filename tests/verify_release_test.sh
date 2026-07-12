@@ -46,12 +46,12 @@ write_manifest() {
     cat > "$file" <<EOF
 source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
-release_tag=dawnforge-deferred-finish-v6
+release_tag=dawnforge-deferred-finish-v7
 upstream_source_repo=https://github.com/hrk4649/godot_ios_plugin_iap
 upstream_source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 build_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 build_commit=0123456789abcdef0123456789abcdef01234567
-build_tag=dawnforge-deferred-finish-v6
+build_tag=dawnforge-deferred-finish-v7
 toolchain=Godot-4.7.0;Xcode-26.6
 contract_version=1
 transaction_id=transactionID
@@ -74,12 +74,12 @@ write_contract() {
     cat > "$file" <<EOF
 source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
-release_tag=dawnforge-deferred-finish-v6
+release_tag=dawnforge-deferred-finish-v7
 upstream_source_repo=https://github.com/hrk4649/godot_ios_plugin_iap
 upstream_source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 build_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 build_commit=0123456789abcdef0123456789abcdef01234567
-build_tag=dawnforge-deferred-finish-v6
+build_tag=dawnforge-deferred-finish-v7
 toolchain=Godot-4.7.0;Xcode-26.6
 contract_version=1
 transaction_id=transactionID
@@ -122,7 +122,7 @@ DawnForgeIAPUpstreamSourceCommit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 DawnForgeIAPSourceCommit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 DawnForgeIAPBuildRepo=https://github.com/dawn-forge/godot_ios_plugin_iap
 DawnForgeIAPBuildCommit=0123456789abcdef0123456789abcdef01234567
-DawnForgeIAPBuildTag=dawnforge-deferred-finish-v6
+DawnForgeIAPBuildTag=dawnforge-deferred-finish-v7
 DawnForgeIAPArtifactSHA256=$release_hash
 EOF
     write_contract "$destination/ios/plugins/ios-in-app-purchase.contract" "$release_hash" "$debug_hash"
@@ -213,6 +213,23 @@ else
 fi
 expect_rejected 'canonical framework symlink must not escape ios/plugins' "$artifact_zip" "$artifact_manifest"
 
+metadata_symlink_stage="$tmp_dir/metadata-symlink-escape"
+cp -R "$valid_stage" "$metadata_symlink_stage"
+mv "$metadata_symlink_stage/ios/plugins/ios-in-app-purchase.gdip" "$metadata_symlink_stage/ios/escaped.gdip"
+mv "$metadata_symlink_stage/ios/plugins/ios-in-app-purchase.contract" "$metadata_symlink_stage/ios/escaped.contract"
+ln -s ../escaped.gdip "$metadata_symlink_stage/ios/plugins/ios-in-app-purchase.gdip"
+ln -s ../escaped.contract "$metadata_symlink_stage/ios/plugins/ios-in-app-purchase.contract"
+pack_fixture "$metadata_symlink_stage" metadata-symlink-escape
+metadata_symlink_extract="$tmp_dir/metadata-symlink-extract"
+unzip -q "$artifact_zip" -d "$metadata_symlink_extract"
+if test -L "$metadata_symlink_extract/ios/plugins/ios-in-app-purchase.gdip" \
+    && test -L "$metadata_symlink_extract/ios/plugins/ios-in-app-purchase.contract"; then
+    pass 'archive preserves descriptor and contract symlink fixture'
+else
+    fail 'archive did not preserve descriptor and contract symlink fixture'
+fi
+expect_rejected 'descriptor and contract symlinks must not escape ios/plugins' "$artifact_zip" "$artifact_manifest"
+
 preflight_repo="$tmp_dir/preflight-repo"
 mkdir -p "$preflight_repo/scripts"
 cp "$repo_root/scripts/package_release.sh" "$preflight_repo/scripts/package_release.sh"
@@ -222,7 +239,7 @@ git -C "$preflight_repo" config user.name 'V4 Test'
 git -C "$preflight_repo" remote add origin https://github.com/dawn-forge/godot_ios_plugin_iap.git
 git -C "$preflight_repo" add scripts/package_release.sh
 git -C "$preflight_repo" commit -qm 'fixture'
-git -C "$preflight_repo" tag -a dawnforge-deferred-finish-v6 -m fixture
+git -C "$preflight_repo" tag -a dawnforge-deferred-finish-v7 -m fixture
 
 mock_bin="$tmp_dir/mock-bin"
 mkdir -p "$mock_bin"
@@ -233,24 +250,24 @@ for argument in "\$@"; do
     if [ "\$argument" = ls-remote ]; then
         case "\${IOS_IAP_TEST_REMOTE_MODE:-annotated}" in
             annotated)
-                printf '%040d\trefs/tags/dawnforge-deferred-finish-v6\n' 1
-                printf '%s\trefs/tags/dawnforge-deferred-finish-v6^{}\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
+                printf '%040d\trefs/tags/dawnforge-deferred-finish-v7\n' 1
+                printf '%s\trefs/tags/dawnforge-deferred-finish-v7^{}\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
                 ;;
             noisy)
-                printf '%040d\trefs/tags/dawnforge-deferred-finish-v6\n' 1
+                printf '%040d\trefs/tags/dawnforge-deferred-finish-v7\n' 1
                 count=0
                 while [ "\$count" -lt 20000 ]; do
                     printf '%040d\trefs/tags/noise-%s\n' 3 "\$count"
                     count=\$((count + 1))
                 done
-                printf '%s\trefs/tags/dawnforge-deferred-finish-v6^{}\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
+                printf '%s\trefs/tags/dawnforge-deferred-finish-v7^{}\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
                 ;;
             lightweight)
-                printf '%s\trefs/tags/dawnforge-deferred-finish-v6\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
+                printf '%s\trefs/tags/dawnforge-deferred-finish-v7\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
                 ;;
             mismatch)
-                printf '%040d\trefs/tags/dawnforge-deferred-finish-v6\n' 1
-                printf '%040d\trefs/tags/dawnforge-deferred-finish-v6^{}\n' 2
+                printf '%040d\trefs/tags/dawnforge-deferred-finish-v7\n' 1
+                printf '%040d\trefs/tags/dawnforge-deferred-finish-v7^{}\n' 2
                 ;;
         esac
         exit 0
@@ -266,7 +283,7 @@ run_preflight() {
 }
 
 if run_preflight annotated > "$tmp_dir/preflight-clean.txt" 2>&1 \
-    && grep -Fxq 'build_tag=dawnforge-deferred-finish-v6' "$tmp_dir/preflight-clean.txt" \
+    && grep -Fxq 'build_tag=dawnforge-deferred-finish-v7' "$tmp_dir/preflight-clean.txt" \
     && grep -Eq '^build_commit=[0-9a-f]{40}$' "$tmp_dir/preflight-clean.txt" \
     && grep -Fxq 'upstream_source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37' "$tmp_dir/preflight-clean.txt"; then
     pass 'clean tagged build source preflight'
@@ -296,8 +313,8 @@ else
     fail 'remote mismatched release tag failed for the wrong reason'
 fi
 
-git -C "$preflight_repo" tag -d dawnforge-deferred-finish-v6 >/dev/null
-git -C "$preflight_repo" tag dawnforge-deferred-finish-v6
+git -C "$preflight_repo" tag -d dawnforge-deferred-finish-v7 >/dev/null
+git -C "$preflight_repo" tag dawnforge-deferred-finish-v7
 if run_preflight annotated > "$tmp_dir/preflight-local-lightweight.txt" 2>&1; then
     fail 'local lightweight release tag preflight was accepted'
 elif grep -Fxq 'local release tag must be annotated' "$tmp_dir/preflight-local-lightweight.txt"; then
@@ -306,8 +323,8 @@ else
     fail 'local lightweight release tag failed for the wrong reason'
 fi
 
-git -C "$preflight_repo" tag -d dawnforge-deferred-finish-v6 >/dev/null
-git -C "$preflight_repo" tag -a dawnforge-deferred-finish-v6 -m fixture
+git -C "$preflight_repo" tag -d dawnforge-deferred-finish-v7 >/dev/null
+git -C "$preflight_repo" tag -a dawnforge-deferred-finish-v7 -m fixture
 printf 'dirty\n' > "$preflight_repo/dirty.txt"
 if run_preflight annotated > "$tmp_dir/preflight-dirty.txt" 2>&1; then
     fail 'dirty build source preflight was accepted'

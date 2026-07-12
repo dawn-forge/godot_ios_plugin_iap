@@ -6,7 +6,7 @@ upstream_source_repo="https://github.com/hrk4649/godot_ios_plugin_iap"
 upstream_source_commit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
 build_repo="https://github.com/dawn-forge/godot_ios_plugin_iap"
 godot_version="4.7.0"
-release_tag="dawnforge-deferred-finish-v6"
+release_tag="dawnforge-deferred-finish-v7"
 output_dir="$repo_root/dist"
 preflight_only=false
 
