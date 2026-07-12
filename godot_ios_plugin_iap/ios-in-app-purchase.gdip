@@ -15,11 +15,11 @@ files=[]
 linker_flags=["-ObjC","-Wl,-weak-lswiftCore,-weak-lswiftObjectiveC,-weak-lswift_Concurrency"]
 
 [plist]
-DawnForgeIAPContractVersion=1
-DawnForgeIAPUpstreamSourceRepo=https://github.com/hrk4649/godot_ios_plugin_iap
-DawnForgeIAPUpstreamSourceCommit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
-DawnForgeIAPSourceCommit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
-DawnForgeIAPBuildRepo=GENERATED_AFTER_BUILD
-DawnForgeIAPBuildCommit=GENERATED_AFTER_BUILD
-DawnForgeIAPBuildTag=GENERATED_AFTER_BUILD
-DawnForgeIAPArtifactSHA256=GENERATED_AFTER_BUILD
+DawnForgeIAPContractVersion="1"
+DawnForgeIAPUpstreamSourceRepo="https://github.com/hrk4649/godot_ios_plugin_iap"
+DawnForgeIAPUpstreamSourceCommit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
+DawnForgeIAPSourceCommit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
+DawnForgeIAPBuildRepo="GENERATED_AFTER_BUILD"
+DawnForgeIAPBuildCommit="GENERATED_AFTER_BUILD"
+DawnForgeIAPBuildTag="GENERATED_AFTER_BUILD"
+DawnForgeIAPArtifactSHA256="GENERATED_AFTER_BUILD"

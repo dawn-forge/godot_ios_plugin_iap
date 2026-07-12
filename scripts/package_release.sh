@@ -6,7 +6,7 @@ upstream_source_repo="https://github.com/hrk4649/godot_ios_plugin_iap"
 upstream_source_commit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
 build_repo="https://github.com/dawn-forge/godot_ios_plugin_iap"
 godot_version="4.7.0"
-release_tag="dawnforge-deferred-finish-v7"
+release_tag="dawnforge-deferred-finish-v8"
 output_dir="$repo_root/dist"
 preflight_only=false
 
@@ -113,13 +113,13 @@ mkdir -p "$output_dir/stage/ios/plugins" "$output_dir/stage/ios/framework"
 cp -R "$release_framework" "$output_dir/stage/ios/plugins/"
 cp -R "$debug_framework" "$output_dir/stage/ios/plugins/"
 sed \
-    -e "s#^DawnForgeIAPUpstreamSourceRepo=.*#DawnForgeIAPUpstreamSourceRepo=$upstream_source_repo#" \
-    -e "s#^DawnForgeIAPUpstreamSourceCommit=.*#DawnForgeIAPUpstreamSourceCommit=$upstream_source_commit#" \
-    -e "s#^DawnForgeIAPSourceCommit=.*#DawnForgeIAPSourceCommit=$upstream_source_commit#" \
-    -e "s#^DawnForgeIAPBuildRepo=.*#DawnForgeIAPBuildRepo=$build_repo#" \
-    -e "s#^DawnForgeIAPBuildCommit=.*#DawnForgeIAPBuildCommit=$build_commit#" \
-    -e "s#^DawnForgeIAPBuildTag=.*#DawnForgeIAPBuildTag=$build_tag#" \
-    -e "s#^DawnForgeIAPArtifactSHA256=.*#DawnForgeIAPArtifactSHA256=$release_hash#" \
+    -e "s#^DawnForgeIAPUpstreamSourceRepo=.*#DawnForgeIAPUpstreamSourceRepo=\"$upstream_source_repo\"#" \
+    -e "s#^DawnForgeIAPUpstreamSourceCommit=.*#DawnForgeIAPUpstreamSourceCommit=\"$upstream_source_commit\"#" \
+    -e "s#^DawnForgeIAPSourceCommit=.*#DawnForgeIAPSourceCommit=\"$upstream_source_commit\"#" \
+    -e "s#^DawnForgeIAPBuildRepo=.*#DawnForgeIAPBuildRepo=\"$build_repo\"#" \
+    -e "s#^DawnForgeIAPBuildCommit=.*#DawnForgeIAPBuildCommit=\"$build_commit\"#" \
+    -e "s#^DawnForgeIAPBuildTag=.*#DawnForgeIAPBuildTag=\"$build_tag\"#" \
+    -e "s#^DawnForgeIAPArtifactSHA256=.*#DawnForgeIAPArtifactSHA256=\"$release_hash\"#" \
     "$plugin_root/ios-in-app-purchase.gdip" > "$output_dir/stage/ios/plugins/ios-in-app-purchase.gdip"
 sed \
     -e "s#^source_repo=.*#source_repo=$build_repo#" \

@@ -130,13 +130,13 @@ for descriptor_line in \
     grep -Fxq "$descriptor_line" "$descriptor" || { echo "unexpected descriptor layout" >&2; exit 1; }
 done
 
-grep -Fxq "DawnForgeIAPUpstreamSourceRepo=$upstream_source_repo" "$descriptor" || { echo "descriptor upstream repository mismatch" >&2; exit 1; }
-grep -Fxq "DawnForgeIAPUpstreamSourceCommit=$upstream_source_commit" "$descriptor" || { echo "descriptor upstream commit mismatch" >&2; exit 1; }
-grep -Fxq "DawnForgeIAPSourceCommit=$upstream_source_commit" "$descriptor" || { echo "descriptor legacy upstream commit mismatch" >&2; exit 1; }
-grep -Fxq "DawnForgeIAPBuildRepo=$build_repo" "$descriptor" || { echo "descriptor build repository mismatch" >&2; exit 1; }
-grep -Fxq "DawnForgeIAPBuildCommit=$build_commit" "$descriptor" || { echo "descriptor build commit mismatch" >&2; exit 1; }
-grep -Fxq "DawnForgeIAPBuildTag=$build_tag" "$descriptor" || { echo "descriptor build tag mismatch" >&2; exit 1; }
-grep -Fxq "DawnForgeIAPContractVersion=$(manifest_value contract_version)" "$descriptor" || { echo "descriptor contract version mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPUpstreamSourceRepo=\"$upstream_source_repo\"" "$descriptor" || { echo "descriptor upstream repository mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPUpstreamSourceCommit=\"$upstream_source_commit\"" "$descriptor" || { echo "descriptor upstream commit mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPSourceCommit=\"$upstream_source_commit\"" "$descriptor" || { echo "descriptor legacy upstream commit mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPBuildRepo=\"$build_repo\"" "$descriptor" || { echo "descriptor build repository mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPBuildCommit=\"$build_commit\"" "$descriptor" || { echo "descriptor build commit mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPBuildTag=\"$build_tag\"" "$descriptor" || { echo "descriptor build tag mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPContractVersion=\"$(manifest_value contract_version)\"" "$descriptor" || { echo "descriptor contract version mismatch" >&2; exit 1; }
 
 descriptor_binary="ios-in-app-purchase.xcframework"
 descriptor_stem="${descriptor_binary%.xcframework}"
@@ -156,6 +156,6 @@ for framework_path in "$release_path" "$debug_path"; do
 done
 [[ "$(hash_tree "$release_path")" == "$release_hash" ]] || { echo "release framework SHA-256 mismatch" >&2; exit 1; }
 [[ "$(hash_tree "$debug_path")" == "$debug_hash" ]] || { echo "debug framework SHA-256 mismatch" >&2; exit 1; }
-grep -Fxq "DawnForgeIAPArtifactSHA256=$release_hash" "$descriptor" || { echo "descriptor artifact SHA-256 mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPArtifactSHA256=\"$release_hash\"" "$descriptor" || { echo "descriptor artifact SHA-256 mismatch" >&2; exit 1; }
 [[ "$(contract_value binary_sha256)" == "$release_hash" ]] || { echo "contract binary SHA-256 mismatch" >&2; exit 1; }
 printf 'release verified: %s\n' "$archive"
