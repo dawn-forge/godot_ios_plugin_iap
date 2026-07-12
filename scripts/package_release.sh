@@ -2,24 +2,55 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source_commit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
+upstream_source_repo="https://github.com/hrk4649/godot_ios_plugin_iap"
+upstream_source_commit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
+build_repo="https://github.com/dawn-forge/godot_ios_plugin_iap"
 godot_version="4.7.0"
-release_tag="dawnforge-deferred-finish-v3"
+release_tag="dawnforge-deferred-finish-v4"
 output_dir="$repo_root/dist"
+preflight_only=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --source-commit) source_commit="$2"; shift 2 ;;
+        --source-commit|--upstream-source-commit) upstream_source_commit="$2"; shift 2 ;;
         --godot-version) godot_version="$2"; shift 2 ;;
         --output-dir) output_dir="$2"; shift 2 ;;
+        --preflight) preflight_only=true; shift ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
 
-[[ "$source_commit" == "f5b3747efb066c00ea3e206ff9b4f732ade5ed37" ]] || {
-    echo "source commit must remain pinned to f5b3747efb066c00ea3e206ff9b4f732ade5ed37" >&2
+[[ "$upstream_source_commit" == "f5b3747efb066c00ea3e206ff9b4f732ade5ed37" ]] || {
+    echo "upstream source commit must remain pinned to f5b3747efb066c00ea3e206ff9b4f732ade5ed37" >&2
     exit 1
 }
+
+build_source_preflight() {
+    [[ -z "$(git -C "$repo_root" status --porcelain --untracked-files=all)" ]] || {
+        echo "build source must be clean" >&2
+        exit 1
+    }
+    local actual_build_repo
+    actual_build_repo="$(git -C "$repo_root" remote get-url origin)"
+    actual_build_repo="${actual_build_repo%.git}"
+    [[ "$actual_build_repo" == "$build_repo" ]] || {
+        echo "build source must use approved fork remote" >&2
+        exit 1
+    }
+    build_commit="$(git -C "$repo_root" rev-parse HEAD)"
+    build_tag="$(git -C "$repo_root" tag --points-at "$build_commit" --list "$release_tag")"
+    [[ "$build_tag" == "$release_tag" ]] || {
+        echo "build source must be tagged $release_tag" >&2
+        exit 1
+    }
+}
+
+build_source_preflight
+if [[ "$preflight_only" == true ]]; then
+    printf 'upstream_source_repo=%s\nupstream_source_commit=%s\nbuild_repo=%s\nbuild_commit=%s\nbuild_tag=%s\n' \
+        "$upstream_source_repo" "$upstream_source_commit" "$build_repo" "$build_commit" "$build_tag"
+    exit 0
+fi
 
 xcode_version="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
 [[ -n "$xcode_version" ]] || {
@@ -61,11 +92,24 @@ rm -rf "$output_dir"
 mkdir -p "$output_dir/stage/ios/plugins" "$output_dir/stage/ios/framework"
 cp -R "$release_framework" "$output_dir/stage/ios/plugins/"
 cp -R "$debug_framework" "$output_dir/stage/ios/plugins/"
-awk -v hash="$release_hash" '{ if ($0 == "DawnForgeIAPArtifactSHA256=GENERATED_AFTER_BUILD") print "DawnForgeIAPArtifactSHA256=" hash; else print }' \
+sed \
+    -e "s#^DawnForgeIAPUpstreamSourceRepo=.*#DawnForgeIAPUpstreamSourceRepo=$upstream_source_repo#" \
+    -e "s#^DawnForgeIAPUpstreamSourceCommit=.*#DawnForgeIAPUpstreamSourceCommit=$upstream_source_commit#" \
+    -e "s#^DawnForgeIAPSourceCommit=.*#DawnForgeIAPSourceCommit=$upstream_source_commit#" \
+    -e "s#^DawnForgeIAPBuildRepo=.*#DawnForgeIAPBuildRepo=$build_repo#" \
+    -e "s#^DawnForgeIAPBuildCommit=.*#DawnForgeIAPBuildCommit=$build_commit#" \
+    -e "s#^DawnForgeIAPBuildTag=.*#DawnForgeIAPBuildTag=$build_tag#" \
+    -e "s#^DawnForgeIAPArtifactSHA256=.*#DawnForgeIAPArtifactSHA256=$release_hash#" \
     "$plugin_root/ios-in-app-purchase.gdip" > "$output_dir/stage/ios/plugins/ios-in-app-purchase.gdip"
 sed \
-    -e "s#^source_commit=.*#source_commit=$source_commit#" \
+    -e "s#^source_repo=.*#source_repo=$build_repo#" \
+    -e "s#^source_commit=.*#source_commit=$upstream_source_commit#" \
     -e "s#^release_tag=.*#release_tag=$release_tag#" \
+    -e "s#^upstream_source_repo=.*#upstream_source_repo=$upstream_source_repo#" \
+    -e "s#^upstream_source_commit=.*#upstream_source_commit=$upstream_source_commit#" \
+    -e "s#^build_repo=.*#build_repo=$build_repo#" \
+    -e "s#^build_commit=.*#build_commit=$build_commit#" \
+    -e "s#^build_tag=.*#build_tag=$build_tag#" \
     -e "s#^toolchain=.*#toolchain=Godot-$godot_version;Xcode-$xcode_version#" \
     -e "s#^binary_sha256=.*#binary_sha256=$release_hash#" \
     -e "s#^release_binary=.*#release_binary=ios-in-app-purchase.release.xcframework#" \
@@ -82,9 +126,14 @@ release_zip="$output_dir/ios-in-app-purchase.zip"
 )
 zip_hash="$(shasum -a 256 "$release_zip" | awk '{print $1}')"
 cat > "$output_dir/release-manifest.txt" <<EOF
-source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
-source_commit=$source_commit
+source_repo=$build_repo
+source_commit=$upstream_source_commit
 release_tag=$release_tag
+upstream_source_repo=$upstream_source_repo
+upstream_source_commit=$upstream_source_commit
+build_repo=$build_repo
+build_commit=$build_commit
+build_tag=$build_tag
 toolchain=Godot-$godot_version;Xcode-$xcode_version
 contract_version=1
 transaction_id=transactionID

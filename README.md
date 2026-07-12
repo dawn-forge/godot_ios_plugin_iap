@@ -351,6 +351,14 @@ Do not substitute a prebuilt or Sudoku XCFramework. The source contract keeps
 verified StoreKit transactions pending until `finishTransaction` is requested
 with the stable decimal `transactionID`.
 
+Before it invokes Xcode, `package_release.sh` requires a clean checkout of the
+approved Dawn Forge remote whose `HEAD` has the exact release tag. The artifact
+therefore records two distinct provenance layers: `upstream_source_commit` is
+the immutable reviewed upstream pin, while `build_commit` and `build_tag` name
+the exact clean fork source that compiled the XCFrameworks. The legacy
+`source_commit` entry remains a compatibility alias for the upstream pin; it
+is not the compiled fork commit.
+
 GitHub Release assets are unsigned and can be changed by release maintainers.
 Treat the canonical release contract as the tag, GitHub asset digest, and
 independently pinned ZIP SHA-256 sidecar; this repository does not provide an
