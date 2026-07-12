@@ -64,6 +64,23 @@ final class DeferredFinishCoordinatorTests: XCTestCase {
         XCTAssertEqual(unknownIDEvents, [.finishFailed(transactionID: "999", error: "unknown transactionID")])
         XCTAssertEqual(handle.finishCount, 0)
     }
+
+    func test_value_transaction_handle_conforms_to_finish_contract() async throws {
+        let handle: any DeferredTransactionHandle = ValueTransactionHandle(id: 47, productID: "coin_pack_3")
+
+        XCTAssertEqual(handle.id, 47)
+        XCTAssertEqual(handle.productID, "coin_pack_3")
+        try await handle.finish()
+    }
+}
+
+private struct ValueTransactionHandle: DeferredTransactionHandle, Sendable {
+    let id: UInt64
+    let productID: String
+    let productType = "Consumable"
+    let purchasedQuantity = 1
+
+    func finish() async throws {}
 }
 
 private final class FakeTransactionHandle: DeferredTransactionHandle, @unchecked Sendable {

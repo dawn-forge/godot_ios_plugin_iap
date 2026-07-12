@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol DeferredTransactionHandle: AnyObject, Sendable {
+public protocol DeferredTransactionHandle: Sendable {
     var id: UInt64 { get }
     var productID: String { get }
     var productType: String { get }
@@ -42,6 +42,7 @@ public enum DeferredFinishEvent: Equatable, Sendable {
     case finishFailed(transactionID: String, error: String)
 }
 
+@available(iOS 15.0, macOS 10.15, *)
 public actor DeferredFinishCoordinator {
     public typealias UnfinishedProvider = @Sendable () async -> [any DeferredTransactionHandle]
 

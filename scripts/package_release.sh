@@ -72,7 +72,7 @@ zip_hash="$(shasum -a 256 "$release_zip" | awk '{print $1}')"
 cat > "$output_dir/release-manifest.txt" <<EOF
 source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 source_commit=$source_commit
-release_tag=dawnforge-deferred-finish
+release_tag=dawnforge-deferred-finish-v1
 toolchain=Godot-$godot_version;Xcode-26.5
 contract_version=1
 transaction_id=transactionID
