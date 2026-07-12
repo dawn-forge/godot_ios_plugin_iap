@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source_commit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
 godot_version="4.7.0"
-release_tag="dawnforge-deferred-finish-v2"
+release_tag="dawnforge-deferred-finish-v3"
 output_dir="$repo_root/dist"
 
 while [[ $# -gt 0 ]]; do
@@ -68,6 +68,10 @@ sed \
     -e "s#^release_tag=.*#release_tag=$release_tag#" \
     -e "s#^toolchain=.*#toolchain=Godot-$godot_version;Xcode-$xcode_version#" \
     -e "s#^binary_sha256=.*#binary_sha256=$release_hash#" \
+    -e "s#^release_binary=.*#release_binary=ios-in-app-purchase.release.xcframework#" \
+    -e "s#^release_binary_sha256=.*#release_binary_sha256=$release_hash#" \
+    -e "s#^debug_binary=.*#debug_binary=ios-in-app-purchase.debug.xcframework#" \
+    -e "s#^debug_binary_sha256=.*#debug_binary_sha256=$debug_hash#" \
     -e "s#^zip_sha256=.*#zip_sha256=DETACHED#" \
     "$plugin_root/ios-in-app-purchase.contract.template" > "$output_dir/stage/ios/plugins/ios-in-app-purchase.contract"
 
