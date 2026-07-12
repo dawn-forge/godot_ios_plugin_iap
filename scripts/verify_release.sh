@@ -132,6 +132,7 @@ grep -Fxq "DawnForgeIAPSourceCommit=$upstream_source_commit" "$descriptor" || { 
 grep -Fxq "DawnForgeIAPBuildRepo=$build_repo" "$descriptor" || { echo "descriptor build repository mismatch" >&2; exit 1; }
 grep -Fxq "DawnForgeIAPBuildCommit=$build_commit" "$descriptor" || { echo "descriptor build commit mismatch" >&2; exit 1; }
 grep -Fxq "DawnForgeIAPBuildTag=$build_tag" "$descriptor" || { echo "descriptor build tag mismatch" >&2; exit 1; }
+grep -Fxq "DawnForgeIAPContractVersion=$(manifest_value contract_version)" "$descriptor" || { echo "descriptor contract version mismatch" >&2; exit 1; }
 
 descriptor_binary="ios-in-app-purchase.xcframework"
 descriptor_stem="${descriptor_binary%.xcframework}"
@@ -145,6 +146,10 @@ release_path="$plugins_dir/$release_binary"
 debug_path="$plugins_dir/$debug_binary"
 [[ -d "$release_path" ]] || { echo "release framework missing" >&2; exit 1; }
 [[ -d "$debug_path" ]] || { echo "debug framework missing" >&2; exit 1; }
+for framework_path in "$release_path" "$debug_path"; do
+    [[ ! -L "$framework_path" ]] || { echo "XCFramework root must not be a symlink" >&2; exit 1; }
+    [[ -z "$(find "$framework_path" -type l -print -quit)" ]] || { echo "XCFramework tree must not contain symlinks" >&2; exit 1; }
+done
 [[ "$(hash_tree "$release_path")" == "$release_hash" ]] || { echo "release framework SHA-256 mismatch" >&2; exit 1; }
 [[ "$(hash_tree "$debug_path")" == "$debug_hash" ]] || { echo "debug framework SHA-256 mismatch" >&2; exit 1; }
 grep -Fxq "DawnForgeIAPArtifactSHA256=$release_hash" "$descriptor" || { echo "descriptor artifact SHA-256 mismatch" >&2; exit 1; }

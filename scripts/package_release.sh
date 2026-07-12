@@ -6,7 +6,7 @@ upstream_source_repo="https://github.com/hrk4649/godot_ios_plugin_iap"
 upstream_source_commit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
 build_repo="https://github.com/dawn-forge/godot_ios_plugin_iap"
 godot_version="4.7.0"
-release_tag="dawnforge-deferred-finish-v4"
+release_tag="dawnforge-deferred-finish-v5"
 output_dir="$repo_root/dist"
 preflight_only=false
 
@@ -41,6 +41,26 @@ build_source_preflight() {
     build_tag="$(git -C "$repo_root" tag --points-at "$build_commit" --list "$release_tag")"
     [[ "$build_tag" == "$release_tag" ]] || {
         echo "build source must be tagged $release_tag" >&2
+        exit 1
+    }
+    [[ "$(git -C "$repo_root" cat-file -t "refs/tags/$release_tag")" == tag ]] || {
+        echo "local release tag must be annotated" >&2
+        exit 1
+    }
+    [[ "$(git -C "$repo_root" rev-parse "refs/tags/$release_tag^{}")" == "$build_commit" ]] || {
+        echo "local release tag must peel to build commit" >&2
+        exit 1
+    }
+    local remote_tags remote_tag_object remote_peeled_commit
+    remote_tags="$(git ls-remote --tags "$build_repo" "refs/tags/$release_tag" "refs/tags/$release_tag^{}")"
+    remote_tag_object="$(printf '%s\n' "$remote_tags" | awk -v tag="refs/tags/$release_tag" '$2 == tag { print $1; exit }')"
+    remote_peeled_commit="$(printf '%s\n' "$remote_tags" | awk -v tag="refs/tags/$release_tag^{}" '$2 == tag { print $1; exit }')"
+    [[ -n "$remote_tag_object" && -n "$remote_peeled_commit" ]] || {
+        echo "remote release tag must be annotated" >&2
+        exit 1
+    }
+    [[ "$remote_peeled_commit" == "$build_commit" ]] || {
+        echo "remote release tag must peel to build commit" >&2
         exit 1
     }
 }

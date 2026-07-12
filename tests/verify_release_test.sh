@@ -35,17 +35,23 @@ replace_key() {
     mv "$file.next" "$file"
 }
 
+remove_line() {
+    local file="$1" line="$2"
+    awk -v line="$line" '$0 != line { print }' "$file" > "$file.next"
+    mv "$file.next" "$file"
+}
+
 write_manifest() {
     local file="$1" zip_hash="$2" release_hash="$3" debug_hash="$4"
     cat > "$file" <<EOF
 source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
-release_tag=dawnforge-deferred-finish-v4
+release_tag=dawnforge-deferred-finish-v5
 upstream_source_repo=https://github.com/hrk4649/godot_ios_plugin_iap
 upstream_source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 build_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 build_commit=0123456789abcdef0123456789abcdef01234567
-build_tag=dawnforge-deferred-finish-v4
+build_tag=dawnforge-deferred-finish-v5
 toolchain=Godot-4.7.0;Xcode-26.6
 contract_version=1
 transaction_id=transactionID
@@ -68,12 +74,12 @@ write_contract() {
     cat > "$file" <<EOF
 source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
-release_tag=dawnforge-deferred-finish-v4
+release_tag=dawnforge-deferred-finish-v5
 upstream_source_repo=https://github.com/hrk4649/godot_ios_plugin_iap
 upstream_source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 build_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 build_commit=0123456789abcdef0123456789abcdef01234567
-build_tag=dawnforge-deferred-finish-v4
+build_tag=dawnforge-deferred-finish-v5
 toolchain=Godot-4.7.0;Xcode-26.6
 contract_version=1
 transaction_id=transactionID
@@ -110,12 +116,13 @@ initialization="ios_in_app_purchase_init"
 deinitialization="ios_in_app_purchase_deinit"
 
 [plist]
+DawnForgeIAPContractVersion=1
 DawnForgeIAPUpstreamSourceRepo=https://github.com/hrk4649/godot_ios_plugin_iap
 DawnForgeIAPUpstreamSourceCommit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 DawnForgeIAPSourceCommit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
 DawnForgeIAPBuildRepo=https://github.com/dawn-forge/godot_ios_plugin_iap
 DawnForgeIAPBuildCommit=0123456789abcdef0123456789abcdef01234567
-DawnForgeIAPBuildTag=dawnforge-deferred-finish-v4
+DawnForgeIAPBuildTag=dawnforge-deferred-finish-v5
 DawnForgeIAPArtifactSHA256=$release_hash
 EOF
     write_contract "$destination/ios/plugins/ios-in-app-purchase.contract" "$release_hash" "$debug_hash"
@@ -127,7 +134,7 @@ pack_fixture() {
     artifact_manifest="$tmp_dir/$name-manifest.txt"
     (
         cd "$stage"
-        find . -type f -print | LC_ALL=C sort | zip -X -q "$artifact_zip" -@
+        find . \( -type f -o -type l \) -print | LC_ALL=C sort | zip -X -y -q "$artifact_zip" -@
     )
     local release_hash debug_hash zip_hash
     release_hash="$(hash_tree "$stage/ios/plugins/ios-in-app-purchase.release.xcframework")"
@@ -173,6 +180,12 @@ mv "$descriptor_stage/ios/plugins/ios-in-app-purchase.gdip.next" "$descriptor_st
 pack_fixture "$descriptor_stage" descriptor-binary-layout
 expect_rejected 'descriptor binary must use canonical unsuffixed layout' "$artifact_zip" "$artifact_manifest"
 
+marker_stage="$tmp_dir/descriptor-contract-version"
+cp -R "$valid_stage" "$marker_stage"
+remove_line "$marker_stage/ios/plugins/ios-in-app-purchase.gdip" 'DawnForgeIAPContractVersion=1'
+pack_fixture "$marker_stage" descriptor-contract-version
+expect_rejected 'descriptor contract version marker must match the manifest' "$artifact_zip" "$artifact_manifest"
+
 escape_stage="$tmp_dir/binary-path-escape"
 cp -R "$valid_stage" "$escape_stage"
 cp -R "$escape_stage/ios/plugins/ios-in-app-purchase.release.xcframework" "$escape_stage/evil-release.xcframework"
@@ -186,6 +199,20 @@ replace_key "$artifact_manifest" release_binary ../../evil-release.xcframework
 replace_key "$artifact_manifest" debug_binary ../../evil-debug.xcframework
 expect_rejected 'binary paths must not escape ios/plugins' "$artifact_zip" "$artifact_manifest"
 
+symlink_stage="$tmp_dir/framework-symlink-escape"
+cp -R "$valid_stage" "$symlink_stage"
+mv "$symlink_stage/ios/plugins/ios-in-app-purchase.release.xcframework" "$symlink_stage/escape-release.xcframework"
+ln -s ../../escape-release.xcframework "$symlink_stage/ios/plugins/ios-in-app-purchase.release.xcframework"
+pack_fixture "$symlink_stage" framework-symlink-escape
+symlink_extract="$tmp_dir/framework-symlink-extract"
+unzip -q "$artifact_zip" -d "$symlink_extract"
+if test -L "$symlink_extract/ios/plugins/ios-in-app-purchase.release.xcframework"; then
+    pass 'archive preserves canonical framework symlink fixture'
+else
+    fail 'archive did not preserve canonical framework symlink fixture'
+fi
+expect_rejected 'canonical framework symlink must not escape ios/plugins' "$artifact_zip" "$artifact_manifest"
+
 preflight_repo="$tmp_dir/preflight-repo"
 mkdir -p "$preflight_repo/scripts"
 cp "$repo_root/scripts/package_release.sh" "$preflight_repo/scripts/package_release.sh"
@@ -195,17 +222,79 @@ git -C "$preflight_repo" config user.name 'V4 Test'
 git -C "$preflight_repo" remote add origin https://github.com/dawn-forge/godot_ios_plugin_iap.git
 git -C "$preflight_repo" add scripts/package_release.sh
 git -C "$preflight_repo" commit -qm 'fixture'
-git -C "$preflight_repo" tag -a dawnforge-deferred-finish-v4 -m fixture
-if "$preflight_repo/scripts/package_release.sh" --preflight > "$tmp_dir/preflight-clean.txt" 2>&1 \
-    && grep -Fxq 'build_tag=dawnforge-deferred-finish-v4' "$tmp_dir/preflight-clean.txt" \
+git -C "$preflight_repo" tag -a dawnforge-deferred-finish-v5 -m fixture
+
+mock_bin="$tmp_dir/mock-bin"
+mkdir -p "$mock_bin"
+real_git="$(command -v git)"
+cat > "$mock_bin/git" <<EOF
+#!/bin/sh
+for argument in "\$@"; do
+    if [ "\$argument" = ls-remote ]; then
+        case "\${IOS_IAP_TEST_REMOTE_MODE:-annotated}" in
+            annotated)
+                printf '%040d\trefs/tags/dawnforge-deferred-finish-v5\n' 1
+                printf '%s\trefs/tags/dawnforge-deferred-finish-v5^{}\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
+                ;;
+            lightweight)
+                printf '%s\trefs/tags/dawnforge-deferred-finish-v5\n' "\$IOS_IAP_TEST_BUILD_COMMIT"
+                ;;
+            mismatch)
+                printf '%040d\trefs/tags/dawnforge-deferred-finish-v5\n' 1
+                printf '%040d\trefs/tags/dawnforge-deferred-finish-v5^{}\n' 2
+                ;;
+        esac
+        exit 0
+    fi
+done
+exec "$real_git" "\$@"
+EOF
+chmod +x "$mock_bin/git"
+build_commit="$(git -C "$preflight_repo" rev-parse HEAD)"
+run_preflight() {
+    IOS_IAP_TEST_REMOTE_MODE="$1" IOS_IAP_TEST_BUILD_COMMIT="$build_commit" PATH="$mock_bin:$PATH" \
+        "$preflight_repo/scripts/package_release.sh" --preflight
+}
+
+if run_preflight annotated > "$tmp_dir/preflight-clean.txt" 2>&1 \
+    && grep -Fxq 'build_tag=dawnforge-deferred-finish-v5' "$tmp_dir/preflight-clean.txt" \
     && grep -Eq '^build_commit=[0-9a-f]{40}$' "$tmp_dir/preflight-clean.txt" \
     && grep -Fxq 'upstream_source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37' "$tmp_dir/preflight-clean.txt"; then
     pass 'clean tagged build source preflight'
 else
     fail 'clean tagged build source preflight'
 fi
+
+if run_preflight lightweight > "$tmp_dir/preflight-remote-lightweight.txt" 2>&1; then
+    fail 'remote lightweight release tag preflight was accepted'
+elif grep -Fxq 'remote release tag must be annotated' "$tmp_dir/preflight-remote-lightweight.txt"; then
+    pass 'remote lightweight release tag preflight was rejected'
+else
+    fail 'remote lightweight release tag failed for the wrong reason'
+fi
+
+if run_preflight mismatch > "$tmp_dir/preflight-remote-mismatch.txt" 2>&1; then
+    fail 'remote mismatched release tag preflight was accepted'
+elif grep -Fxq 'remote release tag must peel to build commit' "$tmp_dir/preflight-remote-mismatch.txt"; then
+    pass 'remote mismatched release tag preflight was rejected'
+else
+    fail 'remote mismatched release tag failed for the wrong reason'
+fi
+
+git -C "$preflight_repo" tag -d dawnforge-deferred-finish-v5 >/dev/null
+git -C "$preflight_repo" tag dawnforge-deferred-finish-v5
+if run_preflight annotated > "$tmp_dir/preflight-local-lightweight.txt" 2>&1; then
+    fail 'local lightweight release tag preflight was accepted'
+elif grep -Fxq 'local release tag must be annotated' "$tmp_dir/preflight-local-lightweight.txt"; then
+    pass 'local lightweight release tag preflight was rejected'
+else
+    fail 'local lightweight release tag failed for the wrong reason'
+fi
+
+git -C "$preflight_repo" tag -d dawnforge-deferred-finish-v5 >/dev/null
+git -C "$preflight_repo" tag -a dawnforge-deferred-finish-v5 -m fixture
 printf 'dirty\n' > "$preflight_repo/dirty.txt"
-if "$preflight_repo/scripts/package_release.sh" --preflight > "$tmp_dir/preflight-dirty.txt" 2>&1; then
+if run_preflight annotated > "$tmp_dir/preflight-dirty.txt" 2>&1; then
     fail 'dirty build source preflight was accepted'
 elif grep -Fxq 'build source must be clean' "$tmp_dir/preflight-dirty.txt"; then
     pass 'dirty build source preflight was rejected'
