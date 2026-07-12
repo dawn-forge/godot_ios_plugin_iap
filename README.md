@@ -335,6 +335,22 @@ Thank you [DrMoriarty](https://github.com/DrMoriarty) and [cengiz-pz](https://gi
         - script
             - LICENSE
 
+## Dawn Forge deferred-finish build
+
+The Dawn Forge fork is pinned in `UPSTREAM.md` and retains the upstream MIT
+license. With Godot 4.7.0 headers available and Xcode 26.5 selected, run:
+
+```sh
+scripts/package_release.sh --source-commit f5b3747efb066c00ea3e206ff9b4f732ade5ed37
+scripts/verify_release.sh dist/ios-in-app-purchase-deferred-finish.zip dist/release-manifest.txt
+```
+
+The build creates release and debug XCFrameworks, computes source and binary
+hashes, emits a detached ZIP SHA-256 sidecar, and stages the `.gdip` markers.
+Do not substitute a prebuilt or Sudoku XCFramework. The source contract keeps
+verified StoreKit transactions pending until `finishTransaction` is requested
+with the stable decimal `transactionID`.
+
 ## License
 
 ```

@@ -15,3 +15,6 @@ files=[]
 linker_flags=["-ObjC","-Wl,-weak-lswiftCore,-weak-lswiftObjectiveC,-weak-lswift_Concurrency"]
 
 [plist]
+DawnForgeIAPContractVersion=1
+DawnForgeIAPSourceCommit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
+DawnForgeIAPArtifactSHA256=GENERATED_AFTER_BUILD
