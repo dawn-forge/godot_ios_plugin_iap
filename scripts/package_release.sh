@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source_commit="f5b3747efb066c00ea3e206ff9b4f732ade5ed37"
 godot_version="4.7.0"
+release_tag="dawnforge-deferred-finish-v2"
 output_dir="$repo_root/dist"
 
 while [[ $# -gt 0 ]]; do
@@ -17,6 +18,12 @@ done
 
 [[ "$source_commit" == "f5b3747efb066c00ea3e206ff9b4f732ade5ed37" ]] || {
     echo "source commit must remain pinned to f5b3747efb066c00ea3e206ff9b4f732ade5ed37" >&2
+    exit 1
+}
+
+xcode_version="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+[[ -n "$xcode_version" ]] || {
+    echo "unable to determine Xcode version" >&2
     exit 1
 }
 
@@ -58,12 +65,13 @@ awk -v hash="$release_hash" '{ if ($0 == "DawnForgeIAPArtifactSHA256=GENERATED_A
     "$plugin_root/ios-in-app-purchase.gdip" > "$output_dir/stage/ios/plugins/ios-in-app-purchase.gdip"
 sed \
     -e "s#^source_commit=.*#source_commit=$source_commit#" \
-    -e "s#^toolchain=.*#toolchain=Godot-$godot_version;Xcode-26.5#" \
+    -e "s#^release_tag=.*#release_tag=$release_tag#" \
+    -e "s#^toolchain=.*#toolchain=Godot-$godot_version;Xcode-$xcode_version#" \
     -e "s#^binary_sha256=.*#binary_sha256=$release_hash#" \
     -e "s#^zip_sha256=.*#zip_sha256=DETACHED#" \
     "$plugin_root/ios-in-app-purchase.contract.template" > "$output_dir/stage/ios/plugins/ios-in-app-purchase.contract"
 
-release_zip="$output_dir/ios-in-app-purchase-deferred-finish.zip"
+release_zip="$output_dir/ios-in-app-purchase.zip"
 (
     cd "$output_dir/stage"
     find . -print | LC_ALL=C sort | zip -X -q -@ "$release_zip"
@@ -72,8 +80,8 @@ zip_hash="$(shasum -a 256 "$release_zip" | awk '{print $1}')"
 cat > "$output_dir/release-manifest.txt" <<EOF
 source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 source_commit=$source_commit
-release_tag=dawnforge-deferred-finish-v1
-toolchain=Godot-$godot_version;Xcode-26.5
+release_tag=$release_tag
+toolchain=Godot-$godot_version;Xcode-$xcode_version
 contract_version=1
 transaction_id=transactionID
 verification_field=verified
@@ -88,6 +96,6 @@ debug_binary=ios-in-app-purchase.debug.xcframework
 debug_binary_sha256=$debug_hash
 zip_sha256=$zip_hash
 EOF
-printf '%s  %s\n' "$zip_hash" "$(basename "$release_zip")" > "$output_dir/ios-in-app-purchase-deferred-finish.zip.sha256"
+printf '%s  %s\n' "$zip_hash" "$(basename "$release_zip")" > "$release_zip.sha256"
 rm -rf "$output_dir/stage"
 printf 'release_zip=%s\nrelease_manifest=%s\nzip_sha256=%s\n' "$release_zip" "$output_dir/release-manifest.txt" "$zip_hash"

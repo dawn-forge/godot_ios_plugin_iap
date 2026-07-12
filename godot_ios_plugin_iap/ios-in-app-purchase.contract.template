@@ -1,7 +1,7 @@
 source_repo=https://github.com/dawn-forge/godot_ios_plugin_iap
 source_commit=f5b3747efb066c00ea3e206ff9b4f732ade5ed37
-release_tag=dawnforge-deferred-finish
-toolchain=Godot-4.7.0;Xcode-26.5
+release_tag=GENERATED_AFTER_BUILD
+toolchain=GENERATED_AFTER_BUILD
 contract_version=1
 transaction_id=transactionID
 verification_field=verified
