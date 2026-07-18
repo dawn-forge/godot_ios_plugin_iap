@@ -10,6 +10,7 @@ class PluginClass : public Object {
     
 public:
     int request (String arg1, Dictionary arg2);
+    void _emit_response(String response_name, Dictionary data);
     
     PluginClass();
     ~PluginClass();
@@ -17,4 +18,3 @@ public:
 
 // callback definition
 typedef void (^ResponseCallback)(NSString *responseName, NSDictionary *data);
-

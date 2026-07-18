@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <CoreFoundation/CoreFoundation.h>
 
 #include "core/config/project_settings.h"
 
@@ -98,7 +99,9 @@ Variant nsobject_to_variant(NSObject *object) {
         //bool, char, int, uint, longlong -> int
         //float, double -> float
         NSNumber *num = (NSNumber *)object;
-        if (strcmp([num objCType], @encode(BOOL)) == 0) {
+        // Swift Bool values bridge as __NSCFBoolean. Detect the CoreFoundation type
+        // explicitly because its objCType is not stable across Apple runtimes.
+        if (CFGetTypeID((__bridge CFTypeRef)num) == CFBooleanGetTypeID()) {
             return Variant((int)[num boolValue]);
         } else if (strcmp([num objCType], @encode(char)) == 0) {
             return Variant((int)[num charValue]);
@@ -159,6 +162,7 @@ NSObject *variant_to_nsobject(Variant v) {
  */
 void PluginClass::_bind_methods() {
     ClassDB::bind_method(D_METHOD("request"), &PluginClass::request);
+    ClassDB::bind_method(D_METHOD("_emit_response"), &PluginClass::_emit_response);
     
     ADD_SIGNAL(MethodInfo("response",
         PropertyInfo(Variant::STRING, "responseName"),
@@ -166,14 +170,35 @@ void PluginClass::_bind_methods() {
     
 }
 
+void PluginClass::_emit_response(String response_name, Dictionary data) {
+    emit_signal("response", response_name, data);
+}
+
 PluginClass::PluginClass() {
     NSLog(@"initialize object");
     // set callback
     ResponseCallback cb = ^(NSString *responseName, NSDictionary *data) {
         NSLog(@"in the callback");
+        // Keep bridge diagnostics bounded: never log the signed JWS or full purchase payload.
+        NSLog(@"bridge response=%@ keys=%@ result=%@ (%@) verified=%@ (%@)",
+              responseName,
+              [data allKeys],
+              [data objectForKey:@"result"],
+              [[data objectForKey:@"result"] class],
+              [data objectForKey:@"verified"],
+              [[data objectForKey:@"verified"] class]);
         String cResName = from_nsstring(responseName);
         Dictionary cData = from_nsdictionary(data);
-        emit_signal("response", cResName, cData);
+        if ([responseName isEqualToString:@"purchase"]) {
+            Variant verified = cData.get("verified", Variant());
+            String verified_text = cData.has("verified") ? String(verified) : "<missing>";
+            NSLog(@"bridge Godot purchase verified_has=%d verified_type=%d verified=%s",
+                  cData.has("verified"),
+                  (int)verified.get_type(),
+                  verified_text.utf8().get_data());
+        }
+        // StoreKit callbacks may run on a Swift concurrency executor; emit only from Godot's message queue.
+        call_deferred("_emit_response", cResName, cData);
     };
     [SwiftClass shared].callback = cb;
 }
