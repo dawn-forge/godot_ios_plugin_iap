@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000000001 /* DeferredFinishCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* DeferredFinishCoordinator.swift */; };
 		515DBA0925EE9E1E00187A4B /* SwiftClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 515DBA0825EE9E1E00187A4B /* SwiftClass.swift */; };
 		90CAAA9924E71FF10013969F /* godot_plugin.mm in Sources */ = {isa = PBXBuildFile; fileRef = 90CAAA9824E71FF10013969F /* godot_plugin.mm */; };
 		90CAAAA424E724C50013969F /* godot_plugin_class.mm in Sources */ = {isa = PBXBuildFile; fileRef = 90CAAAA324E724C50013969F /* godot_plugin_class.mm */; };
@@ -25,6 +26,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A10000000000000000000002 /* DeferredFinishCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeferredFinishCoordinator.swift; sourceTree = "<group>"; };
 		515DBA0725EE9E1D00187A4B /* godot_plugin-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "godot_plugin-Bridging-Header.h"; sourceTree = "<group>"; };
 		515DBA0825EE9E1E00187A4B /* SwiftClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftClass.swift; sourceTree = "<group>"; };
 		90CAAA9424E71FF10013969F /* libgodot_plugin.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libgodot_plugin.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,6 +67,7 @@
 		90CAAA9624E71FF10013969F /* godot_plugin */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000002 /* DeferredFinishCoordinator.swift */,
 				90CAAA9724E71FF10013969F /* godot_plugin.h */,
 				90CAAA9824E71FF10013969F /* godot_plugin.mm */,
 				90CAAAA524E724D00013969F /* godot_plugin_class.h */,
@@ -140,6 +143,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000001 /* DeferredFinishCoordinator.swift in Sources */,
 				90CAAAA424E724C50013969F /* godot_plugin_class.mm in Sources */,
 				515DBA0925EE9E1E00187A4B /* SwiftClass.swift in Sources */,
 				90CAAA9924E71FF10013969F /* godot_plugin.mm in Sources */,
@@ -199,7 +203,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -251,7 +255,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;

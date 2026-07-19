@@ -2,12 +2,35 @@ import Foundation
 import StoreKit
 
 @available(iOS 15.0, *)
+private struct StoreKitTransactionHandle: DeferredTransactionHandle, @unchecked Sendable {
+    let transaction: Transaction
+
+    var id: UInt64 { transaction.id }
+    var productID: String { transaction.productID }
+    var productType: String { transaction.productType.rawValue }
+    var purchasedQuantity: Int { transaction.purchasedQuantity }
+
+    func finish() async throws {
+        await transaction.finish()
+    }
+}
+
+@available(iOS 15.0, *)
 @objcMembers public class SwiftClass: NSObject {
     static let shared = SwiftClass()
 
     var callback: ((String, [String: Any]) -> Void)?
 
     private var updateTask: Task<Void, Never>? = nil
+    private static let deferredFinishCoordinator = DeferredFinishCoordinator(unfinished: {
+        var handles: [any DeferredTransactionHandle] = []
+        for await result in Transaction.unfinished {
+            if case .verified(let transaction) = result {
+                handles.append(StoreKitTransactionHandle(transaction: transaction))
+            }
+        }
+        return handles
+    })
 
     override init() {
         super.init()
@@ -35,6 +58,49 @@ import StoreKit
         shared.callback?(a1, a2)
     }
 
+    private static func emit(_ events: [DeferredFinishEvent]) {
+        for event in events {
+            switch event {
+            case .purchase(let purchase):
+                var data: [String: Any] = [
+                    "request": "purchase",
+                    "result": purchase.verified ? "success" : "unverified",
+                    "verified": purchase.verified,
+                    "transactionID": purchase.transactionID,
+                    "productID": purchase.productID,
+                    "productType": purchase.productType,
+                    "purchasedQuantity": String(purchase.purchasedQuantity),
+                ]
+                if let jwsRepresentation = purchase.jwsRepresentation {
+                    data["jwsRepresentation"] = jwsRepresentation
+                }
+                if let verificationError = purchase.verificationError {
+                    data["error"] = verificationError
+                }
+                response(a1: "purchase", a2: data)
+            case .finishSucceeded(let transactionID):
+                response(
+                    a1: "finishTransaction",
+                    a2: [
+                        "request": "finishTransaction",
+                        "transactionID": transactionID,
+                        "result": "success",
+                    ]
+                )
+            case .finishFailed(let transactionID, let error):
+                response(
+                    a1: "finishTransaction",
+                    a2: [
+                        "request": "finishTransaction",
+                        "transactionID": transactionID,
+                        "result": "error",
+                        "error": error,
+                    ]
+                )
+            }
+        }
+    }
+
     static func request(a1: NSString, a2: NSDictionary) -> Int {
 
         switch a1 {
@@ -52,6 +118,10 @@ import StoreKit
             return requestTransactionAll()
         case "proceedUnfinishedTransactions":
             return requestProceedUnfinishedTransactions()
+        case "capabilities":
+            return requestCapabilities()
+        case "finishTransaction":
+            return requestFinishTransaction(data: a2)
         case "appStoreSync":
             return requestAppStoreSync()
         default:
@@ -170,19 +240,20 @@ import StoreKit
                 case .success(let verificationResult):
                     switch verificationResult {
                     case .verified(let transaction):
-                        await transaction.finish()
-                        let resultData = convertToPurchaseResponse(transaction)
-                        let withJws = addJwsRepresentation(currDict: resultData, verified: verificationResult)
-                        response(a1: "purchase", a2: withJws)
+                        let handle = StoreKitTransactionHandle(transaction: transaction)
+                        let events = await deferredFinishCoordinator.receiveVerified(
+                            handle,
+                            jwsRepresentation: verificationResult.jwsRepresentation
+                        )
+                        emit(events)
                         break
                     case .unverified(let transaction, let error):
-                        let resultData = [
-                            "request": "purchase",
-                            "productID": productID!,
-                            "result": "unverified",
-                            "error": error.localizedDescription,
-                        ]
-                        response(a1: "purchase", a2: resultData)
+                        let handle = StoreKitTransactionHandle(transaction: transaction)
+                        let events = await deferredFinishCoordinator.receiveUnverified(
+                            handle,
+                            error: error.localizedDescription
+                        )
+                        emit(events)
                         break
                     }
                     break
@@ -446,15 +517,20 @@ import StoreKit
     ) async {
         switch verificationResult {
         case .verified(let transaction):
-            await transaction.finish()
-            let resultData = convertToPurchaseResponse(transaction)
-            let withJws = addJwsRepresentation(currDict: resultData, verified: verificationResult)
-            response(a1: "purchase", a2: withJws)
+            let handle = StoreKitTransactionHandle(transaction: transaction)
+            let events = await deferredFinishCoordinator.receiveVerified(
+                handle,
+                jwsRepresentation: verificationResult.jwsRepresentation
+            )
+            emit(events)
             break
         case .unverified(let transaction, let verificationError):
-            print(
-                "proceedVerificationResult: unverified transaction \(transaction), error \(verificationError)"
+            let handle = StoreKitTransactionHandle(transaction: transaction)
+            let events = await deferredFinishCoordinator.receiveUnverified(
+                handle,
+                error: verificationError.localizedDescription
             )
+            emit(events)
             break
         }
     }
@@ -473,6 +549,42 @@ import StoreKit
                 "result": "success",
             ]
             response(a1: "proceedUnfinishedTransactions", a2: resultData)
+        }
+        return 0
+    }
+
+    static func requestCapabilities() -> Int {
+        response(
+            a1: "capabilities",
+            a2: [
+                "request": "capabilities",
+                "result": "success",
+                "contract_version": 1,
+                "deferred_finish": true,
+                "verified_transaction_ids": true,
+                "unfinished_replay": true,
+            ]
+        )
+        return 0
+    }
+
+    static func requestFinishTransaction(data: NSDictionary) -> Int {
+        guard let transactionID = data["transactionID"] as? String else {
+            response(
+                a1: "finishTransaction",
+                a2: [
+                    "request": "finishTransaction",
+                    "transactionID": "",
+                    "result": "error",
+                    "error": "transactionID is required",
+                ]
+            )
+            return 1
+        }
+
+        Task {
+            let events = await deferredFinishCoordinator.finishTransaction(transactionID)
+            emit(events)
         }
         return 0
     }
